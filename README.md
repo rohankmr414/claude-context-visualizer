@@ -1,6 +1,6 @@
-# Claude Context Visualizer
+# Claude Usage Limit Visualizer
 
-A statusline for [Claude Code](https://docs.anthropic.com/en/docs/claude-code) that shows your context window usage as a segmented bar — so you always know how much room you have left.
+A statusline for [Claude Code](https://docs.anthropic.com/en/docs/claude-code) that shows your API usage limit as a colored bar — so you always know how much capacity you have left.
 
 <img width="full" height="full" alt="Frame 21" src="https://github.com/user-attachments/assets/298c0ae0-afeb-4d99-8257-18bc920f5837" />
 
@@ -21,49 +21,49 @@ To update to the latest version, re-run the install command:
 curl -fsSL https://raw.githubusercontent.com/GLaDO8/claude-context-visualizer/main/install.sh | bash
 ```
 
-This overwrites the scripts with the latest version while preserving your `settings.json` configuration.
+This overwrites the script with the latest version while preserving your `settings.json` configuration.
 
 ## What You Get
 
-A two-line status bar at the bottom of every Claude Code session:
+A status bar at the bottom of every Claude Code session showing your usage limits:
 
-**Segments** (left to right):
+**5-hour limit** (Line 1):
 
-| Color | Segment | What it tracks |
-|-------|---------|----------------|
-| Pink | Tools + Agents | Results from Read, Grep, Bash, Task, etc. |
-| Teal | MCP | Results from Figma, Supabase, Slack, etc. |
-| Green | Chat | Your messages + Claude's responses |
-| Grey | System | Prompt, tool schemas, skills, CLAUDE.md |
-| Dark | Free | Available usable space |
-| Black | Buffer | Autocompact reserve (16.5%) — not usable |
+| Color | Meaning | Remaining |
+|-------|---------|-----------|
+| Green | Plenty left | > 50% |
+| Yellow | Moderate | 30–50% |
+| Orange | Getting low | 15–30% |
+| Red | Critical | < 15% |
 
-**Extras**: model name, git branch, session cost, and warnings at 70% (`!`) and 85% (`[/clear]`).
+**7-day limit** (Line 2, if available):
+
+Same color coding, shown as a second bar below.
+
+**Extras**: remaining percentage, time until reset, session cost, model name, git branch, and warnings at 30% (`!`), 15% (`!`), and 5% (`[LIMIT]`).
+
+**Note**: Usage limits are only available for Claude.ai subscribers (Pro/Max). API key users will see a minimal status with cost and model info.
 
 ## How It Works
 
-Two scripts work together:
-
-1. **`statusline.sh`** — Renders the bar. Claude Code calls it via `settings.json` → `statusLine.command`, piping session metrics as JSON on stdin. It reads the context window size, usage percentage, cost, and model info, then composites the bar from tracked data.
-
-2. **`context-tracker.sh`** — A PostToolUse hook. Every time Claude uses a tool, this hook estimates the token cost of the result (`payload_chars / 4`) and categorizes it (tools, agents, or MCP). It writes cumulative totals to `/tmp/claude-context-tracker/<session>.json`, which the statusline reads for the breakdown.
+A single script — **`statusline.sh`** — reads the JSON that Claude Code pipes to the `statusLine.command` on stdin. It extracts `rate_limits.five_hour` and `rate_limits.seven_day` usage percentages and renders them as colored bars with reset countdowns.
 
 ### Architecture
 
 ```
 Claude Code
-  ├─ PostToolUse hook ──→ context-tracker.sh ──→ /tmp/claude-context-tracker/<session>.json
-  └─ statusLine command ──→ statusline.sh ──→ reads tracker file ──→ renders bar
+  └─ statusLine command ──→ statusline.sh ──→ reads rate_limits JSON ──→ renders bars
 ```
 
-The tracker uses `lockf` (macOS) or `flock` (Linux) for concurrency-safe writes, and all `jq` interpolation uses `--arg`/`@sh` to prevent shell injection.
+No hooks needed — all data comes directly from the status line input.
 
 ## Requirements
 
-- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) (any version with `statusLine` + `hooks` support)
+- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) (any version with `statusLine` support)
 - `jq` — JSON processor (`brew install jq` / `apt install jq`)
 - macOS or Linux
 - Any terminal — auto-detects color support (truecolor, 256-color, or basic 16-color)
+- Claude.ai Pro or Max subscription (for usage limit data)
 
 ## Uninstall
 
@@ -77,14 +77,7 @@ Or run locally:
 ./uninstall.sh
 ```
 
-This removes the scripts, cleans `settings.json`, and deletes tracker data.
-
-## Configuration
-
-The statusline is calibrated for a typical Claude Code setup. If you have many MCP servers or plugins, the overhead estimate may drift. To recalibrate:
-
-1. Run `/context` in Claude Code to see actual token breakdown
-2. Update `overhead_base` in `statusline.sh` (line ~52)
+This removes the script and cleans `settings.json`.
 
 ## License
 
