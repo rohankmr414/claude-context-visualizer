@@ -3,7 +3,7 @@
 # Claude Usage Limit Visualizer — Installer
 # ═══════════════════════════════════════════════════════════
 # One-line install:
-#   curl -fsSL https://raw.githubusercontent.com/GLaDO8/claude-context-visualizer/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/rohankmr414/claude-usage-limit-visualizer/main/install.sh | bash
 #
 # What it does:
 #   1. Downloads statusline.sh
@@ -13,7 +13,7 @@
 
 set -euo pipefail
 
-REPO_RAW="https://raw.githubusercontent.com/GLaDO8/claude-context-visualizer/main"
+REPO_RAW="https://raw.githubusercontent.com/rohankmr414/claude-usage-limit-visualizer/main"
 CLAUDE_DIR="$HOME/.claude"
 SETTINGS="$CLAUDE_DIR/settings.json"
 

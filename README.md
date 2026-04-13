@@ -8,7 +8,7 @@ A statusline for [Claude Code](https://docs.anthropic.com/en/docs/claude-code) t
 ## Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/GLaDO8/claude-context-visualizer/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/rohankmr414/claude-usage-limit-visualizer/main/install.sh | bash
 ```
 
 Then restart Claude Code.
@@ -18,7 +18,7 @@ Then restart Claude Code.
 To update to the latest version, re-run the install command:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/GLaDO8/claude-context-visualizer/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/rohankmr414/claude-usage-limit-visualizer/main/install.sh | bash
 ```
 
 This overwrites the script with the latest version while preserving your `settings.json` configuration.
@@ -68,7 +68,7 @@ No hooks needed — all data comes directly from the status line input.
 ## Uninstall
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/GLaDO8/claude-context-visualizer/main/uninstall.sh | bash
+curl -fsSL https://raw.githubusercontent.com/rohankmr414/claude-usage-limit-visualizer/main/uninstall.sh | bash
 ```
 
 Or run locally:
