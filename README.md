@@ -2,7 +2,7 @@
 
 A statusline for [Claude Code](https://docs.anthropic.com/en/docs/claude-code) that shows your API usage limit as a colored bar — so you always know how much capacity you have left.
 
-<img width="full" height="full" alt="Frame 21" src="https://github.com/user-attachments/assets/298c0ae0-afeb-4d99-8257-18bc920f5837" />
+<img alt="Claude Usage Limit Visualizer" src="screenshots/demo.png" />
 
 
 ## Install
