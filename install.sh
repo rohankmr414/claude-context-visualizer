@@ -1,13 +1,14 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════
-# Claude Usage Limit Visualizer — Installer
+# Claude Code Status Visualizer — Installer
 # ═══════════════════════════════════════════════════════════
 # One-line install:
 #   curl -fsSL https://raw.githubusercontent.com/rohankmr414/claude-usage-limit-visualizer/main/install.sh | bash
 #
 # What it does:
-#   1. Downloads statusline.sh
-#   2. Patches ~/.claude/settings.json to wire it up
+#   1. Downloads statusline.sh and context-tracker.sh
+#   2. Patches ~/.claude/settings.json to wire them up
+#   3. Creates the tracker temp directory
 #
 # Prerequisites: jq, curl, Claude Code
 
@@ -15,7 +16,9 @@ set -euo pipefail
 
 REPO_RAW="https://raw.githubusercontent.com/rohankmr414/claude-usage-limit-visualizer/main"
 CLAUDE_DIR="$HOME/.claude"
+HOOKS_DIR="$CLAUDE_DIR/hooks"
 SETTINGS="$CLAUDE_DIR/settings.json"
+TRACKER_DIR="/tmp/claude-context-tracker"
 
 # ─── Colors ───────────────────────────────────────────────
 red="\033[31m"; green="\033[32m"; yellow="\033[33m"; bold="\033[1m"; reset="\033[0m"
@@ -29,12 +32,17 @@ command -v jq   >/dev/null 2>&1 || error "jq is required. Install with: brew ins
 command -v curl >/dev/null 2>&1 || error "curl is required."
 
 # ─── Create directories ──────────────────────────────────
-mkdir -p "$CLAUDE_DIR"
+mkdir -p "$HOOKS_DIR"
+mkdir -p "$TRACKER_DIR" && chmod 700 "$TRACKER_DIR"
 
-# ─── Download script ─────────────────────────────────────
+# ─── Download scripts ────────────────────────────────────
 info "Downloading statusline.sh..."
 curl -fsSL "$REPO_RAW/statusline.sh" -o "$CLAUDE_DIR/statusline.sh"
 chmod +x "$CLAUDE_DIR/statusline.sh"
+
+info "Downloading context-tracker.sh..."
+curl -fsSL "$REPO_RAW/context-tracker.sh" -o "$HOOKS_DIR/context-tracker.sh"
+chmod +x "$HOOKS_DIR/context-tracker.sh"
 
 # ─── Patch settings.json ─────────────────────────────────
 # Create settings.json if it doesn't exist
@@ -57,7 +65,7 @@ else
   info "Added statusLine config"
 fi
 
-# ─── Clean up old context-tracker hook if present ─────────
+# Add PostToolUse hook for context-tracker (skip if already present)
 has_tracker=$(jq '
   (.hooks // {}).PostToolUse // [] |
   map(.hooks // []) | flatten |
@@ -65,35 +73,26 @@ has_tracker=$(jq '
 ' "$SETTINGS" 2>/dev/null)
 
 if [ "$has_tracker" = "true" ]; then
+  warn "context-tracker hook already configured — skipping"
+else
   jq '
-    .hooks.PostToolUse = [
-      .hooks.PostToolUse[] |
-      select(
-        (.hooks // []) | map(.command | tostring | test("context-tracker")) | any | not
-      )
-    ] |
-    if (.hooks.PostToolUse | length) == 0 then del(.hooks.PostToolUse) else . end |
-    if (.hooks | length) == 0 then del(.hooks) else . end
+    .hooks = (.hooks // {}) |
+    .hooks.PostToolUse = ((.hooks.PostToolUse // []) + [{
+      "hooks": [{
+        "type": "command",
+        "command": "~/.claude/hooks/context-tracker.sh",
+        "timeout": 5
+      }]
+    }])
   ' "$SETTINGS" > "${SETTINGS}.tmp" && mv "${SETTINGS}.tmp" "$SETTINGS"
-  info "Removed old context-tracker hook"
-fi
-
-# Remove old context-tracker script if present
-if [ -f "$CLAUDE_DIR/hooks/context-tracker.sh" ]; then
-  rm "$CLAUDE_DIR/hooks/context-tracker.sh"
-  info "Removed old context-tracker.sh"
-fi
-
-# Clean up old tracker data
-if [ -d "/tmp/claude-context-tracker" ]; then
-  rm -rf "/tmp/claude-context-tracker"
-  info "Cleaned up old tracker data"
+  info "Added context-tracker PostToolUse hook"
 fi
 
 # ─── Done ─────────────────────────────────────────────────
-printf "\n%b✓ Claude Usage Limit Visualizer installed!%b\n" "${bold}${green}" "$reset"
+printf "\n%b✓ Claude Code Status Visualizer installed!%b\n" "${bold}${green}" "$reset"
 printf "\n  Restart Claude Code to see the statusline.\n"
-printf "  The bar shows your API usage limit with color-coded severity:\n"
-printf "    %bgreen%b = plenty left  %byellow%b = moderate  %borange%b = getting low  %bred%b = critical\n\n" \
+printf "  The statusline shows:\n"
+printf "    %bUsage limits%b  — 5h/7d rate limit bars (Pro/Max subscribers)\n" "$bold" "$reset"
+printf "    %bContext window%b — token usage breakdown:\n" "$bold" "$reset"
+printf "      %bpink%b = tool results  %bteal%b = MCP  %bgreen%b = chat  %bgrey%b = system overhead\n\n" \
   "$bold" "$reset" "$bold" "$reset" "$bold" "$reset" "$bold" "$reset"
-printf "  Note: Usage limits are only available for Claude.ai subscribers (Pro/Max).\n\n"

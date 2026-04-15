@@ -1,8 +1,8 @@
-# Claude Usage Limit Visualizer
+# Claude Code Status Visualizer
 
-A statusline for [Claude Code](https://docs.anthropic.com/en/docs/claude-code) that shows your API usage limit as a colored bar — so you always know how much capacity you have left.
+A statusline for [Claude Code](https://docs.anthropic.com/en/docs/claude-code) that shows both your **API usage limits** and **context window breakdown** — so you always know how much capacity you have left.
 
-<img alt="Claude Usage Limit Visualizer" src="screenshots/demo.png" />
+<img alt="Claude Code Status Visualizer" src="screenshots/demo.png" />
 
 
 ## Install
@@ -21,11 +21,13 @@ To update to the latest version, re-run the install command:
 curl -fsSL https://raw.githubusercontent.com/rohankmr414/claude-usage-limit-visualizer/main/install.sh | bash
 ```
 
-This overwrites the script with the latest version while preserving your `settings.json` configuration.
+This overwrites the scripts with the latest version while preserving your `settings.json` configuration.
 
 ## What You Get
 
-A status bar at the bottom of every Claude Code session showing your usage limits:
+A status bar at the bottom of every Claude Code session showing:
+
+### Usage Limits (Lines 1–2)
 
 **5-hour limit** (Line 1):
 
@@ -40,22 +42,40 @@ A status bar at the bottom of every Claude Code session showing your usage limit
 
 Same color coding, shown as a second bar below.
 
-**Extras**: remaining percentage, time until reset, session cost, model name, git branch, and warnings at 30% (`!`), 15% (`!`), and 5% (`[LIMIT]`).
+**Extras**: remaining percentage, time until reset, model name, git branch, and warnings at 30% (`!`), 15% (`!`), and 5% (`[LIMIT]`).
 
-**Note**: Usage limits are only available for Claude.ai subscribers (Pro/Max). API key users will see a minimal status with cost and model info.
+**Note**: Usage limits are only available for Claude.ai subscribers (Pro/Max). API key users will still see the context window visualization below.
+
+### Context Window (Lines 3–4)
+
+A stacked bar showing how your context window tokens are distributed:
+
+| Color | Segment | Description |
+|-------|---------|-------------|
+| Pink | tools | Token results from Read, Grep, Bash, etc. |
+| Teal | mcp | MCP tool results (Figma, Supabase, Slack, etc.) |
+| Green | chat | User messages + assistant responses |
+| Grey | system | System prompt, skills, memory files |
+| Dark grey | free | Remaining usable space |
+| Near-black | buffer | Autocompact buffer (16.5%, reserved) |
+
+**Extras**: tokens used / total, session cost, and a warning at 70% (`!`) or 85% (`[/clear]`).
 
 ## How It Works
 
-A single script — **`statusline.sh`** — reads the JSON that Claude Code pipes to the `statusLine.command` on stdin. It extracts `rate_limits.five_hour` and `rate_limits.seven_day` usage percentages and renders them as colored bars with reset countdowns.
+Two scripts work together:
+
+- **`statusline.sh`** — reads the JSON that Claude Code pipes to `statusLine.command` on stdin. It renders both the usage limit bars (from `rate_limits`) and the context window breakdown (from `context_window` + tracker data).
+
+- **`context-tracker.sh`** — a `PostToolUse` hook that estimates token consumption per tool call and writes running totals to `/tmp/claude-context-tracker/<session>.json`. This powers the tools/mcp/chat breakdown in the context bar.
 
 ### Architecture
 
 ```
 Claude Code
-  └─ statusLine command ──→ statusline.sh ──→ reads rate_limits JSON ──→ renders bars
+  ├─ statusLine command ──→ statusline.sh ──→ reads JSON + tracker ──→ renders all bars
+  └─ PostToolUse hook ────→ context-tracker.sh ──→ writes tracker JSON
 ```
-
-No hooks needed — all data comes directly from the status line input.
 
 ## Requirements
 
@@ -63,7 +83,7 @@ No hooks needed — all data comes directly from the status line input.
 - `jq` — JSON processor (`brew install jq` / `apt install jq`)
 - macOS or Linux
 - Any terminal — auto-detects color support (truecolor, 256-color, or basic 16-color)
-- Claude.ai Pro or Max subscription (for usage limit data)
+- Claude.ai Pro or Max subscription (for usage limit data; context window works for all users)
 
 ## Uninstall
 
@@ -77,7 +97,7 @@ Or run locally:
 ./uninstall.sh
 ```
 
-This removes the script and cleans `settings.json`.
+This removes both scripts, the tracker hook, and cleans `settings.json`.
 
 ## License
 
