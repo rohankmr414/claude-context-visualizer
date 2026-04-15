@@ -2,7 +2,7 @@
 
 A statusline for [Claude Code](https://docs.anthropic.com/en/docs/claude-code) that shows both your **API usage limits** and **context window breakdown** — so you always know how much capacity you have left.
 
-<img alt="Claude Code Status Visualizer" src="screenshots/demo.png" />
+<img width="full" height="full" alt="Frame 21" src="https://github.com/user-attachments/assets/298c0ae0-afeb-4d99-8257-18bc920f5837" />
 
 
 ## Install
