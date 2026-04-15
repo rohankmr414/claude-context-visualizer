@@ -1,4 +1,4 @@
-# Claude Code Status Visualizer
+# Claude Context Visualizer
 
 A statusline for [Claude Code](https://docs.anthropic.com/en/docs/claude-code) that shows both your **API usage limits** and **context window breakdown** — so you always know how much capacity you have left.
 
@@ -25,30 +25,18 @@ This overwrites the scripts with the latest version while preserving your `setti
 
 ## What You Get
 
-A status bar at the bottom of every Claude Code session showing:
+A compact 2-line status bar at the bottom of every Claude Code session:
 
-### Usage Limits (Lines 1–2)
+```
+ ███████▊████▊█▊███▊█████████████▊████▊  50k/200k  5h 62% ↑2h13m · 7d 88%  Opus 4  [main]
+ tools-5k mcp-2k chat-8k (system-15k, skills-1k, memory-2k)
+```
 
-**5-hour limit** (Line 1):
+### Line 1: Context bar + stats + limits
 
-| Color | Meaning | Remaining |
-|-------|---------|-----------|
-| Green | Plenty left | > 50% |
-| Yellow | Moderate | 30–50% |
-| Orange | Getting low | 15–30% |
-| Red | Critical | < 15% |
+A stacked bar showing how your context window tokens are distributed, followed by token counts, usage limits, the model name, and the current git branch.
 
-**7-day limit** (Line 2, if available):
-
-Same color coding, shown as a second bar below.
-
-**Extras**: remaining percentage, time until reset, model name, git branch, and warnings at 30% (`!`), 15% (`!`), and 5% (`[LIMIT]`).
-
-**Note**: Usage limits are only available for Claude.ai subscribers (Pro/Max). API key users will still see the context window visualization below.
-
-### Context Window (Lines 3–4)
-
-A stacked bar showing how your context window tokens are distributed:
+**Context bar segments:**
 
 | Color | Segment | Description |
 |-------|---------|-------------|
@@ -59,21 +47,38 @@ A stacked bar showing how your context window tokens are distributed:
 | Dark grey | free | Remaining usable space |
 | Near-black | buffer | Autocompact buffer (16.5%, reserved) |
 
-**Extras**: tokens used / total, session cost, and a warning at 70% (`!`) or 85% (`[/clear]`).
+**Usage limit colors** (Pro/Max only):
+
+| Color | Meaning | Remaining |
+|-------|---------|-----------|
+| White | Plenty left | > 50% |
+| Yellow | Moderate | 30–50% |
+| Orange | Getting low | 15–30% |
+| Red | Critical | < 15% |
+
+Both the 5-hour and 7-day limits are shown inline with remaining percentage and time until reset (e.g., `5h 62% ↑2h13m · 7d 88%`).
+
+**Context warnings**: `!` at 70% usage, `[/clear]` at 85%.
+
+**API key users** see session cost instead of usage limits (e.g., `50k/200k ($8.44)`).
+
+### Line 2: Context legend
+
+A breakdown of token consumption by category: `tools`, `mcp`, `chat`, plus the fixed overhead split into `system`, `skills`, and `memory`.
 
 ## How It Works
 
 Two scripts work together:
 
-- **`statusline.sh`** — reads the JSON that Claude Code pipes to `statusLine.command` on stdin. It renders both the usage limit bars (from `rate_limits`) and the context window breakdown (from `context_window` + tracker data).
+- **`statusline.sh`** — reads the JSON that Claude Code pipes to `statusLine.command` on stdin. It renders the context bar, token stats, color-coded usage limits, model name, and git branch — all in a single render pass. Includes auto-calibration of system overhead (measured from the first few renders before any tools run) and compaction detection (resets tracker when token count drops >20% to avoid stale ratios).
 
-- **`context-tracker.sh`** — a `PostToolUse` hook that estimates token consumption per tool call and writes running totals to `/tmp/claude-context-tracker/<session>.json`. This powers the tools/mcp/chat breakdown in the context bar.
+- **`context-tracker.sh`** — a `PostToolUse` hook that estimates token consumption per tool call (~4 chars/token) and writes running totals to `/tmp/claude-context-tracker/<session>.json`. This powers the tools/mcp/chat breakdown in the context bar. Uses file locking for concurrency safety.
 
 ### Architecture
 
 ```
 Claude Code
-  ├─ statusLine command ──→ statusline.sh ──→ reads JSON + tracker ──→ renders all bars
+  ├─ statusLine command ──→ statusline.sh ──→ reads JSON + tracker ──→ renders 2-line status
   └─ PostToolUse hook ────→ context-tracker.sh ──→ writes tracker JSON
 ```
 
