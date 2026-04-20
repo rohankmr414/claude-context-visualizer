@@ -463,7 +463,7 @@ if [ "$seven_day_pct" -ge 0 ] 2>/dev/null; then
   seven_color=$(severity_color $seven_remaining)
   seven_reset_str=$(format_reset_compact "$seven_day_resets")
   [ "$five_hour_pct" -ge 0 ] 2>/dev/null && printf "${c_sep} ·${reset}"
-  printf "  ${c_7d_label}7d ${reset}${seven_color}%d%%${reset}" "$seven_remaining"
+  printf " ${c_7d_label}7d ${reset}${seven_color}%d%%${reset}" "$seven_remaining"
   [ -n "$seven_reset_str" ] && printf "${c_7d_label} ↑%s${reset}" "$seven_reset_str"
 fi
 
