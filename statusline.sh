@@ -25,15 +25,27 @@ eval "$(jq -r '
   @sh "input_tokens=\(.context_window.current_usage.input_tokens // 0)",
   @sh "cache_creation=\(.context_window.current_usage.cache_creation_input_tokens // 0)",
   @sh "cache_read=\(.context_window.current_usage.cache_read_input_tokens // 0)",
-  @sh "total_cost=\(.cost.total_cost_usd // 0)"
+  @sh "total_cost=\(.cost.total_cost_usd // 0)",
+  @sh "effort=\(.model.thinking_effort // .effort // "")"
 ' <<< "$input" 2>/dev/null)"
 
 # Fallback defaults
-: "${model_name:=Unknown}" "${session_id:=default}"
+: "${model_name:=Unknown}" "${session_id:=default}" "${effort:=}"
 : "${five_hour_pct:=-1}" "${five_hour_resets:=0}"
 : "${seven_day_pct:=-1}" "${seven_day_resets:=0}"
 : "${context_size:=200000}" "${used_pct:=0}" "${total_cost:=0}"
 : "${input_tokens:=0}" "${cache_creation:=0}" "${cache_read:=0}"
+
+# If effort not in statusLine JSON, fall back to most recent telemetry for this session
+if [ -z "$effort" ] && [ "$session_id" != "default" ]; then
+  _tfile=$(ls -t "$HOME/.claude/telemetry/1p_failed_events.${session_id}".*.json 2>/dev/null | head -1)
+  if [ -n "$_tfile" ]; then
+    effort=$(tail -1 "$_tfile" | jq -r '
+      .event_data.additional_metadata // "" |
+      if . != "" then (. | fromjson | .effortValue // "") else "" end
+    ' 2>/dev/null || true)
+  fi
+fi
 
 # Guard against zero/negative context_size
 [ "$context_size" -le 0 ] 2>/dev/null && context_size=200000
@@ -468,6 +480,7 @@ if [ "$seven_day_pct" -ge 0 ] 2>/dev/null; then
 fi
 
 printf "${c_model}  %s${reset}" "$model_name"
+[ -n "$effort" ] && printf "${c_dim} (%s)${reset}" "$effort"
 [ -n "$git_branch" ] && printf "  ${c_bold}${c_branch}[%s]${reset}" "$git_branch"
 
 # ─── RENDER LINE 2: Context legend ──────────────────────
